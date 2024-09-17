@@ -1,13 +1,22 @@
 services:
-  vm1:
+  server:
     build:
       context: .
+      dockerfile: Dockerfile.server
     networks:
       signalvlan:
         ipv4_address: 192.168.87.65
-  vm2:
+  client1:
     build:
       context: .
+      dockerfile: Dockerfile.client
+    networks:
+      signalvlan:
+        ipv4_address: 192.168.87.70
+  client2:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
     networks:
       signalvlan:
         ipv4_address: 192.168.87.126
