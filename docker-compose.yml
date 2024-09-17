@@ -23,10 +23,9 @@ services:
 
 networks:
   signalvlan:
-    driver: ipvlan
+    driver: macvlan
     driver_opts:
-      parent: wlp0s20f3 # change to your network interface
-      ipvlan_mode: l2
+      parent: ${NETIF:-wlp0s20f3}
     ipam:
       config:
         - subnet: 192.168.87.0/24
