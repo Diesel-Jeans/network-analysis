@@ -1,0 +1,25 @@
+services:
+  vm1:
+    build:
+      context: .
+    networks:
+      signalvlan:
+        ipv4_address: 192.168.87.65
+  vm2:
+    build:
+      context: .
+    networks:
+      signalvlan:
+        ipv4_address: 192.168.87.126
+
+networks:
+  signalvlan:
+    driver: ipvlan
+    driver_opts:
+      parent: wlp0s20f3 # change to your network interface
+      ipvlan_mode: l2
+    ipam:
+      config:
+        - subnet: 192.168.87.0/24
+          ip_range: 192.168.87.64/26
+          gateway: 192.168.87.1
