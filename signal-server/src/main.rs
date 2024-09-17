@@ -5,7 +5,7 @@ fn handle_connection(stream: TcpStream) {
 }
 
 fn main() -> std::io::Result<()> {
-    let listener = TcpListener::bind("127.0.0.1:8080").unwrap();
+    let listener = TcpListener::bind("0.0.0.0:8080").unwrap();
     println!("Server listening on {}", listener.local_addr().unwrap());
 
     for stream in listener.incoming() {
