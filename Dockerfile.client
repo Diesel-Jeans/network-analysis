@@ -1,11 +1,11 @@
-FROM alpine:3.17 AS build
-RUN apk add rust cargo
-WORKDIR /signal-client
-COPY ./signal-client .
-RUN cargo build --release
+FROM alpine:3.20 AS build
+RUN apk update && apk add rust cargo protobuf-dev
+WORKDIR /signal
+COPY ./signal .
+RUN cargo build --bin client --release
 
-FROM alpine:3.17 AS production
-RUN apk add libgcc
-COPY --from=build ./signal-client/target/release/signal-client .
+FROM alpine:3.20 AS production
+RUN apk update && apk add libgcc
+COPY --from=build ./signal/target/release/client .
 
-CMD watch -n 10 ./signal-client
+CMD watch -n 10 ./client
