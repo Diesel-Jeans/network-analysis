@@ -1,8 +1,13 @@
 use proto::{greeter_server::{Greeter, GreeterServer}, HelloReply, HelloRequest};
+use openssl::ssl::{select_next_proto, AlpnError, SslAcceptor, SslFiletype, SslMethod};
+use std::net::SocketAddr;
+use tokio::net::TcpListener;
+use tokio_stream::wrappers::TcpListenerStream;
+use tonic_openssl::{SslConnectInfo, ALPN_H2_WIRE};
 use tonic::{
     transport::{
-        server::{TcpConnectInfo, TlsConnectInfo},
-        Identity, Server, ServerTlsConfig, Certificate
+        server::TcpConnectInfo,
+        Server
     },
     Request, Response, Status,
 };
@@ -20,11 +25,11 @@ impl Greeter for GreeterService {
         &self,
         request: Request<HelloRequest>,
     ) -> Result<Response<HelloReply>, Status> {
-
-        // let conn_info = request
-        //     .extensions()
-        //     .get::<TlsConnectInfo<TcpConnectInfo>>()
-        //     .unwrap();
+        let remote_addr = request
+            .extensions()
+            .get::<SslConnectInfo<TcpConnectInfo>>()
+            .and_then(|info| info.get_ref().remote_addr());
+        println!("Got a request from {:?}", remote_addr);
 
         println!("Request from client: {:?} with info", request.remote_addr());
 
@@ -38,29 +43,34 @@ impl Greeter for GreeterService {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let cert = std::fs::read_to_string("./tls/server.pem")?;
-    let key = std::fs::read_to_string("./tls/server.key")?;
+    // Setup TLS
+    let mut acceptor = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
+    acceptor
+        .set_private_key_file("./tls/server.key", SslFiletype::PEM)
+        .unwrap();
+    acceptor
+        .set_certificate_chain_file("./tls/server.pem")
+        .unwrap();
 
-    println!("cert {}", cert);
-    println!("key {}", key);
+    acceptor.check_private_key().unwrap();
+    acceptor.set_alpn_protos(ALPN_H2_WIRE)?;
+    acceptor.set_alpn_select_callback(|_ssl, alpn| {
+        select_next_proto(ALPN_H2_WIRE, alpn).ok_or(AlpnError::NOACK)
+    });
 
-    let identity = Identity::from_pem(cert, key);
-    //println!("identity {:?}", identity);
+    let acceptor = acceptor.build();
 
-    let ca_cert = std::fs::read_to_string("./tls/ca.pem")?;
-    let ca = Certificate::from_pem(ca_cert);
-    println!("ca {:?}", ca);
-    
-    let addr = "127.0.0.1:8080".parse()?;
+    // Setup server
+    let addr = "[::1]:50051".parse::<SocketAddr>()?;
+
+    let listener = TcpListener::bind(addr).await?;
+    let incoming = tonic_openssl::incoming(TcpListenerStream::new(listener), acceptor);
+
     let greeter = GreeterService::default();
 
     Server::builder()
-        .tls_config(ServerTlsConfig::new()
-            .identity(identity)
-            .client_ca_root(ca)
-        )?
         .add_service(GreeterServer::new(greeter))
-        .serve(addr)
+        .serve_with_incoming(incoming)
         .await?;
     
     Ok(())

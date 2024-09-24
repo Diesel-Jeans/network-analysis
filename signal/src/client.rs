@@ -1,5 +1,11 @@
-use proto::greeter_client::GreeterClient;
-use tonic::transport::{Channel, Certificate, ClientTlsConfig, Identity};
+use proto::{greeter_client::GreeterClient, HelloRequest};
+use tonic::{body::BoxBody, Request};
+use hyper::{client::connect::HttpConnector, Client, Uri};
+use hyper_openssl::HttpsConnector;
+use openssl::{
+    ssl::{SslConnector, SslMethod},
+    x509::X509,
+};
 
 pub mod proto {
     tonic::include_proto!("helloworld");
@@ -7,39 +13,48 @@ pub mod proto {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let url = "https://127.0.0.1:8080";
-
-    // let pem = std::fs::read_to_string("./tls/client.key")?;
-    // let ca = Certificate::from_pem(pem);
-
-    // let cert = std::fs::read_to_string("./tls/client.crt")?;
-    // let key = std::fs::read_to_string("./tls/client.key")?;
-    // let identity = Identity::from_pem(cert, key);
-
     // Load the root CA certificate
-    let ca_cert = std::fs::read_to_string("./tls/ca.pem")?;
-    let ca = Certificate::from_pem(ca_cert);
+    let pem = tokio::fs::read("./tls/ca.pem").await?;
+    let ca = X509::from_pem(&pem[..])?;
+    let mut connector = SslConnector::builder(SslMethod::tls())?;
+    connector.cert_store_mut().add_cert(ca)?;
+    connector.set_alpn_protos(b"\x02h2")?;
 
-    let tls = ClientTlsConfig::new()
-        //.identity(identity)
-        .ca_certificate(ca)
-        .domain_name("localhost");
+    // Setup HTTPS
+    let mut http = HttpConnector::new();
+    http.enforce_http(false);
+    let mut https = HttpsConnector::with_connector(http, connector)?;
 
-    let channel = Channel::from_static(url)
-    .tls_config(tls)?
-    .connect()
-    .await?;
+    https.set_callback(|c, _| {
+        c.set_verify_hostname(false);
+        Ok(())
+    });
 
-    println!("Client!");
+    let hyper = Client::builder().http2_only(true).build(https);
 
-    let mut client = GreeterClient::new(channel);
+    // Setup client
+    let uri = Uri::from_static("https://[::1]:50051");
 
-    let req = proto::HelloRequest {
+    let add_origin = tower::service_fn(|mut req: hyper::Request<BoxBody>| {
+        let uri = Uri::builder()
+            .scheme(uri.scheme().unwrap().clone())
+            .authority(uri.authority().unwrap().clone())
+            .path_and_query(req.uri().path_and_query().unwrap().clone())
+            .build()
+            .unwrap();
+
+        *req.uri_mut() = uri;
+
+        hyper.request(req)
+    });
+
+    let mut client = GreeterClient::new(add_origin);
+
+    let req = Request::new(HelloRequest {
         name: "Client Eastwood".to_string()
-    };
-    
-    let request = tonic::Request::new(req);
-    let response = client.say_hello(request).await?;
+    });
+
+    let response = client.say_hello(req).await?;
     
     println!("Response: {:?}", response.get_ref().message);
     
