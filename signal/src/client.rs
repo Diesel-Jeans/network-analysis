@@ -14,7 +14,7 @@ pub mod proto {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Load the root CA certificate
-    let pem = tokio::fs::read("./tls/ca.pem").await?;
+    let pem = tokio::fs::read("./tls/rootCA.crt").await?;
     let ca = X509::from_pem(&pem[..])?;
     let mut connector = SslConnector::builder(SslMethod::tls())?;
     connector.cert_store_mut().add_cert(ca)?;

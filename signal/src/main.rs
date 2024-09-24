@@ -49,7 +49,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .set_private_key_file("./tls/server.key", SslFiletype::PEM)
         .unwrap();
     acceptor
-        .set_certificate_chain_file("./tls/server.pem")
+        .set_certificate_chain_file("./tls/server.crt")
         .unwrap();
 
     acceptor.check_private_key().unwrap();
