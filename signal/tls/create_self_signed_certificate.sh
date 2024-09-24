@@ -14,3 +14,6 @@ openssl req -new -key server.key -out server.csr -config server_cert_ext.cnf
 # Sign the server certificate using root certificate
 openssl x509 -req -in server.csr -CA rootCA.crt -CAkey rootCA.key -CAcreateserial \
     -out server.crt -days 365 -sha256 -extfile server_cert_ext.cnf -extensions v3_req
+
+# Clean up
+rm rootCA.key rootCA.srl server.csr
