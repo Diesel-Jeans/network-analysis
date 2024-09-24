@@ -33,7 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let hyper = Client::builder().http2_only(true).build(https);
 
     // Setup client
-    let uri = Uri::from_static("https://[::1]:50051");
+    let uri = Uri::from_static("https://192.168.87.65:8080");
 
     let add_origin = tower::service_fn(|mut req: hyper::Request<BoxBody>| {
         let uri = Uri::builder()

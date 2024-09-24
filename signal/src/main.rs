@@ -61,7 +61,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let acceptor = acceptor.build();
 
     // Setup server
-    let addr = "[::1]:50051".parse::<SocketAddr>()?;
+    let addr = "0.0.0.0:8080".parse::<SocketAddr>()?;
 
     let listener = TcpListener::bind(addr).await?;
     let incoming = tonic_openssl::incoming(TcpListenerStream::new(listener), acceptor);
