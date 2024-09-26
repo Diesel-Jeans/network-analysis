@@ -1,4 +1,4 @@
-# Run
+# Run with Docker
 1. Set your network interface in `.env`
 2. Run with docker compose
 ```bash
@@ -12,3 +12,11 @@ sudo ./host_to_container_bridge.sh
 nmap 192.168.87.0/24 
 ```
 
+# Run local testing
+1. Set your host IP in `.env`
+2. Run server and client
+```bash
+cd signal
+cargo run --bin server
+cargo run --bin client
+```
