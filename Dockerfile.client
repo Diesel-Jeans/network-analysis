@@ -10,5 +10,6 @@ RUN apk update && apk add libgcc && \
 
 COPY --from=build ./signal/target/release/client .
 COPY ./signal/tls/rootCA.crt ./tls/
+COPY .env .
 
 CMD watch -n 10 ./client
