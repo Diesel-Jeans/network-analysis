@@ -1,3 +1,4 @@
+use dotenv::dotenv;
 use proto::{greeter_client::GreeterClient, HelloRequest};
 use tonic::{body::BoxBody, Request};
 use hyper::{client::connect::HttpConnector, Client, Uri};
@@ -33,7 +34,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let hyper = Client::builder().http2_only(true).build(https);
 
     // Setup client
-    let uri = Uri::from_static("https://192.168.87.65:8080");
+    dotenv().ok();
+    let server_ip = std::env::var("SERVER_IP").expect("SERVER_IP must be set.");
+    let uri = Uri::try_from(format!("https://{server_ip}:8080")).expect("Invalid URI");
 
     let add_origin = tower::service_fn(|mut req: hyper::Request<BoxBody>| {
         let uri = Uri::builder()
