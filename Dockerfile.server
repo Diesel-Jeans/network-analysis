@@ -9,6 +9,6 @@ RUN apk update && apk add libgcc && \
     rm -rf /var/cache/apk/*
 
 COPY --from=build ./signal/target/release/server .
-COPY ./signal/tls/server.crt ./signal/tls/server.key ./tls/
+COPY ./signal/tls/server.crt ./signal/tls/server.key ./signal/tls/
 
 CMD ./server

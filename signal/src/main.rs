@@ -1,3 +1,4 @@
+use std::env;
 use proto::{greeter_server::{Greeter, GreeterServer}, HelloReply, HelloRequest};
 use openssl::ssl::{select_next_proto, AlpnError, SslAcceptor, SslFiletype, SslMethod};
 use std::net::SocketAddr;
@@ -43,13 +44,23 @@ impl Greeter for GreeterService {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let current_dir = env::current_dir()?;
+
+    let file = match current_dir.ends_with("signal") {
+        true => "tls/server",
+        false => "signal/tls/server"
+    };
+
+    let private_key = current_dir.join(file.to_owned() + ".key");
+    let certificate = current_dir.join(file.to_owned() + ".crt");
+
     // Setup TLS
     let mut acceptor = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
     acceptor
-        .set_private_key_file("./tls/server.key", SslFiletype::PEM)
+        .set_private_key_file(private_key, SslFiletype::PEM)
         .unwrap();
     acceptor
-        .set_certificate_chain_file("./tls/server.crt")
+        .set_certificate_chain_file(certificate)
         .unwrap();
 
     acceptor.check_private_key().unwrap();

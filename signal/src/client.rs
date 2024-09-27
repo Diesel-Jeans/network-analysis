@@ -1,3 +1,4 @@
+use std::env;
 use dotenv::dotenv;
 use proto::{greeter_client::GreeterClient, HelloRequest};
 use tonic::{body::BoxBody, Request};
@@ -14,8 +15,17 @@ pub mod proto {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let current_dir = env::current_dir()?;
+
+    let file = match current_dir.ends_with("signal") {
+        true => "tls/rootCA",
+        false => "signal/tls/rootCA"
+    };
+
+    let root_ca = current_dir.join(file.to_owned() + ".crt");
+
     // Load the root CA certificate
-    let pem = tokio::fs::read("./tls/rootCA.crt").await?;
+    let pem = tokio::fs::read(root_ca).await?;
     let ca = X509::from_pem(&pem[..])?;
     let mut connector = SslConnector::builder(SslMethod::tls())?;
     connector.cert_store_mut().add_cert(ca)?;

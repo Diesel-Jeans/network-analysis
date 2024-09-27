@@ -16,7 +16,6 @@ nmap 192.168.87.0/24
 1. Set your host IP in `.env`
 2. Run server and client
 ```bash
-cd signal
 cargo run --bin server
 cargo run --bin client
 ```
@@ -31,7 +30,7 @@ cargo build && \
 1. Follow installing dependencies for [pcap](https://github.com/rust-pcap/pcap)
 ```bash
 # Run on linux
-cargo build && \
+cargo build -p analysis && \
     sudo setcap cap_net_raw,cap_net_admin=eip ./target/debug/analysis && \
     ./target/debug/analysis
 ```
