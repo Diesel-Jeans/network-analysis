@@ -1,4 +1,4 @@
-use core::str;
+use super::ip_protocol;
 
 #[derive(Default)]
 pub struct IPv4 {
@@ -11,12 +11,14 @@ impl IPv4 {
     fn to_string_addr(addr: [u8; 4]) -> String {
         format!("{}.{}.{}.{}", addr[0], addr[1], addr[2], addr[3])
     }
+}
 
-    pub fn to_string_src_addr(&self) -> String {
+impl ip_protocol::ToString for IPv4 {
+    fn src_addr(&self) -> String {
         IPv4::to_string_addr(self.src_addr)
     }
 
-    pub fn to_string_dest_addr(&self) -> String {
+    fn dest_addr(&self) -> String {
         IPv4::to_string_addr(self.dest_addr)
     }
 }
