@@ -9,7 +9,7 @@ pub struct IPv6 {
 
 impl IPv6 {
     fn to_string_addr(addr: [u8; 4]) -> String {
-        format!("{}.{}.{}.{} HELLO", addr[0], addr[1], addr[2], addr[3])
+        format!("{}.{}.{}.{}", addr[0], addr[1], addr[2], addr[3])
     }
 }
 
