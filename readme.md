@@ -20,3 +20,18 @@ cd signal
 cargo run --bin server
 cargo run --bin client
 ```
+
+```bash
+cargo build && \
+    sudo setcap cap_net_raw,cap_net_admin=eip ./target/debug/analysis && \
+    ./target/debug/analysis
+```
+
+# Run Analysis
+1. Follow installing dependencies for [pcap](https://github.com/rust-pcap/pcap)
+```bash
+# Run on linux
+cargo build && \
+    sudo setcap cap_net_raw,cap_net_admin=eip ./target/debug/analysis && \
+    ./target/debug/analysis
+```
