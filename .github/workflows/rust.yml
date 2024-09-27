@@ -17,7 +17,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Setup Protobuf
-      run: sudo apt update && sudo apt upgrade -y && sudo apt install -y protobuf-compiler libprotobuf-dev openssl
+      run: sudo apt update && sudo apt upgrade -y && sudo apt install -y protobuf-compiler libprotobuf-dev openssl libpcap-dev
     - name: Run fmt
       run: cargo fmt --check
     - name: Run Clippy
