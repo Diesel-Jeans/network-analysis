@@ -1,17 +1,17 @@
-use std::env;
-use proto::{greeter_server::{Greeter, GreeterServer}, HelloReply, HelloRequest};
 use openssl::ssl::{select_next_proto, AlpnError, SslAcceptor, SslFiletype, SslMethod};
+use proto::{
+    greeter_server::{Greeter, GreeterServer},
+    HelloReply, HelloRequest,
+};
+use std::env;
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
-use tonic_openssl::{SslConnectInfo, ALPN_H2_WIRE};
 use tonic::{
-    transport::{
-        server::TcpConnectInfo,
-        Server
-    },
+    transport::{server::TcpConnectInfo, Server},
     Request, Response, Status,
 };
+use tonic_openssl::{SslConnectInfo, ALPN_H2_WIRE};
 
 mod proto {
     tonic::include_proto!("helloworld");
@@ -48,7 +48,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let file = match current_dir.ends_with("signal") {
         true => "tls/server",
-        false => "signal/tls/server"
+        false => "signal/tls/server",
     };
 
     let private_key = current_dir.join(file.to_owned() + ".key");
@@ -59,9 +59,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     acceptor
         .set_private_key_file(private_key, SslFiletype::PEM)
         .unwrap();
-    acceptor
-        .set_certificate_chain_file(certificate)
-        .unwrap();
+    acceptor.set_certificate_chain_file(certificate).unwrap();
 
     acceptor.check_private_key().unwrap();
     acceptor.set_alpn_protos(ALPN_H2_WIRE)?;
@@ -83,6 +81,5 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_service(GreeterServer::new(greeter))
         .serve_with_incoming(incoming)
         .await?;
-    
     Ok(())
 }

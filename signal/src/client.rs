@@ -1,13 +1,13 @@
-use std::env;
 use dotenv::dotenv;
-use proto::{greeter_client::GreeterClient, HelloRequest};
-use tonic::{body::BoxBody, Request};
 use hyper::{client::connect::HttpConnector, Client, Uri};
 use hyper_openssl::HttpsConnector;
 use openssl::{
     ssl::{SslConnector, SslMethod},
     x509::X509,
 };
+use proto::{greeter_client::GreeterClient, HelloRequest};
+use std::env;
+use tonic::{body::BoxBody, Request};
 
 pub mod proto {
     tonic::include_proto!("helloworld");
@@ -19,7 +19,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let file = match current_dir.ends_with("signal") {
         true => "tls/rootCA",
-        false => "signal/tls/rootCA"
+        false => "signal/tls/rootCA",
     };
 
     let root_ca = current_dir.join(file.to_owned() + ".crt");
@@ -64,12 +64,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut client = GreeterClient::new(add_origin);
 
     let req = Request::new(HelloRequest {
-        name: "Client Eastwood".to_string()
+        name: "Client Eastwood".to_string(),
     });
 
     let response = client.say_hello(req).await?;
-    
     println!("Response: {:?}", response.get_ref().message);
-    
+
     Ok(())
 }
