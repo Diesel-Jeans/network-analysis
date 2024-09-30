@@ -1,8 +1,40 @@
-#[derive(Default)]
+#[derive(Clone, Copy)]
+pub enum EtherType {
+    IPv4,
+    IPv6,
+}
+
+impl Default for EtherType {
+    fn default() -> Self {
+        EtherType::IPv4
+    }
+}
+
+impl EtherType {
+    fn set_type(hex: &str) -> EtherType {
+        match hex {
+            "0x0800" => EtherType::IPv4,
+            "0x86DD" => EtherType::IPv6,
+            _ => todo!(),
+        }
+    }
+
+    fn value(&self) -> String {
+        match *self {
+            EtherType::IPv4 => "0x0800".to_string(),
+            EtherType::IPv6 => "0x86DD".to_string(),
+        }
+    }
+
+    pub fn to_string(&self) -> String {
+        format!("{}", self.value())
+    }
+}
+
 pub struct EthernetFrame {
     pub dest_mac: [u8; 6],
     pub src_mac: [u8; 6],
-    pub ip_type: u16,
+    pub ip_type: EtherType,
 }
 
 impl EthernetFrame {
@@ -22,6 +54,21 @@ impl EthernetFrame {
     }
 
     pub fn to_string_ip_type(&self) -> String {
-        format!("0x{:04x}", self.ip_type)
+        format!("{}", self.ip_type.to_string())
+    }
+
+    pub fn create(packet: &pcap::Packet) -> EthernetFrame {
+        EthernetFrame {
+            dest_mac: [
+                packet[0], packet[1], packet[2], packet[3], packet[4], packet[5],
+            ],
+            src_mac: [
+                packet[6], packet[7], packet[8], packet[9], packet[10], packet[11],
+            ],
+            ip_type: EtherType::set_type(&format!(
+                "0x{:04x}",
+                u16::from_be_bytes([packet[12], packet[13]])
+            )),
+        }
     }
 }

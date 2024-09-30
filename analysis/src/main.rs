@@ -1,3 +1,6 @@
+use ethernet_frame::{EtherType, EthernetFrame};
+use ip_protocol::Packet;
+
 mod ethernet_frame;
 mod ip_protocol;
 
@@ -7,36 +10,30 @@ fn main() {
         .expect("no device available");
     println!("Using device {}", device.name);
 
-    let mut cap = pcap::Capture::from_device(device)
+    let mut cap = pcap::Capture::from_device("wlp0s20f3")
         .unwrap()
         .immediate_mode(true)
         .open()
         .unwrap();
 
     for _ in 0..1 {
-        let mut ethernet_frame: ethernet_frame::EthernetFrame = Default::default();
-        let mut ipv4: ip_protocol::IPv4 = Default::default();
-
-        let ipv6: ip_protocol::IPv6 = Default::default();
-
         if let Ok(packet) = cap.next_packet() {
-            ethernet_frame.dest_mac = [
-                packet[0], packet[1], packet[2], packet[3], packet[4], packet[5],
-            ];
-            ethernet_frame.src_mac = [
-                packet[6], packet[7], packet[8], packet[9], packet[10], packet[11],
-            ];
-            ethernet_frame.ip_type = u16::from_be_bytes([packet[12], packet[13]]);
-            ipv4.src_addr = [packet[30], packet[31], packet[32], packet[33]];
-            ipv4.dest_addr = [packet[34], packet[35], packet[36], packet[37]];
+            let eth_frame = EthernetFrame::create(&packet);
+
+            let ip_packet: Box<dyn Packet> = match eth_frame.ip_type {
+                EtherType::IPv4 => ip_protocol::IPv4::create(&packet, &eth_frame),
+                EtherType::IPv6 => ip_protocol::IPv6::create(&packet, &eth_frame),
+                _ => {
+                    eprintln!("Unknown IP protocol: {:?}", eth_frame.ip_type.to_string());
+                    continue;
+                }
+            };
+
+            println!("ip type: {}", ip_packet.get_eth_frame().to_string_ip_type());
+            println!("src MAC: {}", ip_packet.get_eth_frame().to_string_src_mac());
+            println!("dest MAC: {}", ip_packet.get_eth_frame().to_string_dest_mac());
+            println!("src addr: {}", ip_packet.src_addr());
+            println!("dest addr: {}", ip_packet.dest_addr());
         }
-
-        println!("dest MAC: {}", ethernet_frame.to_string_dest_mac());
-        println!("src MAC: {}", ethernet_frame.to_string_src_mac());
-        println!("ip type: {}", ethernet_frame.to_string_ip_type());
-        println!("src addr: {}", ip_protocol::ToString::src_addr(&ipv4));
-        println!("dest addr: {}", ip_protocol::ToString::dest_addr(&ipv4));
-
-        println!("IPv6: {}", ip_protocol::ToString::dest_addr(&ipv6));
     }
 }

@@ -1,5 +1,5 @@
 mod ip_protocol;
-pub use ip_protocol::ToString;
+pub use ip_protocol::Packet;
 
 mod ipv4;
 pub use ipv4::IPv4;
