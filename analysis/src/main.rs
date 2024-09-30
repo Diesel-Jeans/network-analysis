@@ -13,7 +13,6 @@ fn main() {
         .open()
         .unwrap();
 
-    for _ in 0..1 {
         let mut ethernet_frame: ethernet_frame::EthernetFrame = Default::default();
         let mut ipv4: ip_protocol::IPv4 = Default::default();
 
@@ -41,5 +40,4 @@ fn main() {
             println!("");
             counter += 1;
         }
-    }
 }
