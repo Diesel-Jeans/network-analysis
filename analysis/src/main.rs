@@ -6,7 +6,6 @@ mod database;
 mod ethernet_frame;
 mod ip_protocol;
 
-
 static KILL_EXECUTION: AtomicBool = AtomicBool::new(false);
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
