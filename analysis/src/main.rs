@@ -1,10 +1,11 @@
+use ctrlc;
 use std::sync::atomic::AtomicBool;
 use rusqlite::Connection;
-use ctrlc;
 
+mod database;
 mod ethernet_frame;
 mod ip_protocol;
-mod database;
+
 
 static KILL_EXECUTION: AtomicBool = AtomicBool::new(false);
 
@@ -22,7 +23,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .immediate_mode(true)
         .open()
         .unwrap();
-    
+
     let mut ethernet_frame: ethernet_frame::EthernetFrame = Default::default();
     let mut ipv4: ip_protocol::IPv4 = Default::default();
     let _ipv6: ip_protocol::IPv6 = Default::default();
@@ -46,8 +47,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         conn.execute(
             "INSERT INTO Packet (DestMac, SrcMac, IpType, SrcAddress, DestAddress) VALUES (?1, ?2, ?3, ?4, ?5)",
             (
-                ethernet_frame.to_string_dest_mac(), 
-                ethernet_frame.to_string_src_mac(), 
+                ethernet_frame.to_string_dest_mac(),
+                ethernet_frame.to_string_src_mac(),
                 ethernet_frame.to_string_ip_type(),
                 ip_protocol::ToString::src_addr(&ipv4),
                 ip_protocol::ToString::dest_addr(&ipv4)
@@ -64,7 +65,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut rows = stmt.query([])?;
     println!("");
     while let Some(row) = rows.next()? {
-        println!("packet number id: {}", row.get::<usize, i64>(0)?.to_string());
+        println!(
+            "packet number id: {}",
+            row.get::<usize, i64>(0)?.to_string()
+        );
         println!("dest MAC: {}", row.get::<usize, String>(1)?);
         println!("src MAC: {}", row.get::<usize, String>(2)?);
         println!("ip type: {}", row.get::<usize, String>(3)?);
