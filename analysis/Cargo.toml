@@ -5,3 +5,5 @@ edition = "2021"
 
 [dependencies]
 pcap = { version= "2.2.0", features = ["capture-stream"] }
+rusqlite = { version = "0.32.0", features = ["bundled"] }
+ctrlc = "3.4"
