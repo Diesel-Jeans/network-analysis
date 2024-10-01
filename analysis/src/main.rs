@@ -1,6 +1,6 @@
 use ctrlc;
-use std::sync::atomic::AtomicBool;
 use rusqlite::Connection;
+use std::sync::atomic::AtomicBool;
 
 mod database;
 mod ethernet_frame;
@@ -54,7 +54,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ip_protocol::ToString::dest_addr(&ipv4)
             ),
         )?;
-        
+
         if KILL_EXECUTION.load(std::sync::atomic::Ordering::Relaxed) {
             break;
         }
