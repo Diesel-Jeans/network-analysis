@@ -15,7 +15,7 @@ impl EtherType {
         match hex {
             "0x0800" => EtherType::IPv4,
             "0x86DD" => EtherType::IPv6,
-            _ => todo!(),
+            _ => todo!("EtherType not found: {:?}", hex),
         }
     }
 
@@ -57,7 +57,7 @@ impl EthernetFrame {
         format!("{}", self.ip_type.to_string())
     }
 
-    pub fn create(packet: &pcap::Packet) -> EthernetFrame {
+    pub fn serialize(packet: &pcap::Packet) -> EthernetFrame {
         EthernetFrame {
             dest_mac: [
                 packet[0], packet[1], packet[2], packet[3], packet[4], packet[5],
