@@ -47,6 +47,8 @@ pub struct IPv4 {
     /// Multiple-byte: Record route (Type 7), Strict source route (Type 137),
     /// Loose source route (type 131), Timestamp (Type 68)
     pub options: Vec<Option>,
+    /// (20-bytes - 65,535-bytes) The packet payload - Not included in the checksum
+    pub data: Vec<u8>,
 }
 
 /// Option can max be 40-bytes, where type+size+data+padding = 1+1+(4*9)+2 = 40
@@ -69,7 +71,7 @@ impl IPv4 {
     }
 
     fn ihl(packet: &Packet) -> u8 {
-         (packet[14] & 0x0F) * 4
+        (packet[14] & 0x0F) * 4
     }
 
     fn dscp(packet: &Packet) -> u8 {
@@ -121,7 +123,7 @@ impl IPv4 {
         let ihl_bytes = ihl * 4;
         if ihl > 5 {
             let mut options: Vec<Option> = vec![];
-            let mut init_packet = 25;
+            let mut init_packet = 34;
             let option_length = packet[init_packet] << 3 >> 3;
             while option_length <= ihl_bytes && option_length <= 38 {
                 let r#type = packet[init_packet];
@@ -152,6 +154,18 @@ impl IPv4 {
                 data: vec![0],
             }]
         }
+    }
+
+    fn data(packet: &Packet) -> Vec<u8> {
+        let eth_frame_len: usize = 14;
+        let packet_len = IPv4::ihl(packet);
+
+        let mut data_vec = vec![];
+        for i in (eth_frame_len + packet_len as usize)..packet.data.len() {
+            data_vec.push(packet[i]);
+        }
+
+        data_vec
     }
 }
 
@@ -190,6 +204,7 @@ impl ip_protocol::Packet for IPv4 {
             src_addr: IPv4::src_addr(packet),
             dest_addr: IPv4::dst_addr(packet),
             options: IPv4::options(packet),
+            data: IPv4::data(packet),
         })
     }
 
@@ -373,5 +388,51 @@ mod tests {
         let packet = IPv4Packet::new(&header);
         let dst_addr = ipv4::IPv4::dst_addr(&packet);
         assert_eq!(dst_addr, [192, 168, 87, 70]);
+    }
+
+    #[test]
+    fn test_data() {
+        const BYTE1: u8 = 0b01000101;
+        const BYTE2: u8 = 0b01001001;
+        const BYTE3: u8 = 0b00100000;
+        const BYTE4: u8 = 0b01100001;
+        const BYTE5: u8 = 0b01101101;
+        const BYTE6: u8 = 0b00100000;
+        const BYTE7: u8 = 0b01110000;
+        const BYTE8: u8 = 0b01101100;
+        const BYTE9: u8 = 0b01100001;
+        const BYTE10: u8 = 0b01101001;
+        const BYTE11: u8 = 0b01101110;
+        const BYTE12: u8 = 0b01110100;
+        const BYTE13: u8 = 0b01100101;
+        const BYTE14: u8 = 0b01111000;
+        const BYTE15: u8 = 0b01110100;
+        const BYTE16: u8 = 0b00100001;
+        let mut header = [0u8; 49];
+        header[14] = BYTE1;
+        header[34] = BYTE2;
+        header[35] = BYTE3;
+        header[36] = BYTE4;
+        header[37] = BYTE5;
+        header[38] = BYTE6;
+        header[39] = BYTE7;
+        header[40] = BYTE8;
+        header[41] = BYTE9;
+        header[42] = BYTE10;
+        header[43] = BYTE11;
+        header[44] = BYTE12;
+        header[45] = BYTE13;
+        header[46] = BYTE14;
+        header[47] = BYTE15;
+        header[48] = BYTE16;
+        let packet = IPv4Packet::new(&header);
+        let data = ipv4::IPv4::data(&packet);
+        let mut buffer: String = "".to_string();
+        for i in data.iter() {
+            let x = *i as char;
+            println!("i {}: {}", i, *i as char);
+            buffer.push(x);
+        }
+        assert_eq!(buffer, "I am plaintext!");
     }
 }
