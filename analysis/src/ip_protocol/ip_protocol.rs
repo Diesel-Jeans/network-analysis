@@ -1,7 +1,9 @@
 use std::any::Any;
+
+// use pcap::Packet;
 use crate::ethernet_frame::EthernetFrame;
 
-pub trait Packet: ToString {
+pub trait Packet {
     fn serialize(packet: &pcap::Packet, eth_frame: EthernetFrame) -> Box<dyn Packet>
     where
         Self: Sized;
@@ -9,7 +11,3 @@ pub trait Packet: ToString {
     fn as_any(&self) -> &dyn Any;
 }
 
-pub trait ToString {
-    fn src_addr(&self) -> String;
-    fn dest_addr(&self) -> String;
-}

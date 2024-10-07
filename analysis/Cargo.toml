@@ -5,3 +5,5 @@ edition = "2021"
 
 [dependencies]
 pcap = { version= "2.2.0", features = ["capture-stream"] }
+libc = "0.2"
+
