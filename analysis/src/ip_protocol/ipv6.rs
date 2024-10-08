@@ -13,16 +13,6 @@ impl IPv6 {
     }
 }
 
-impl ip_protocol::ToString for IPv6 {
-    fn dest_addr(&self) -> String {
-        IPv6::to_string_addr(self.dest_addr)
-    }
-
-    fn src_addr(&self) -> String {
-        IPv6::to_string_addr(self.src_addr)
-    }
-}
-
 impl ip_protocol::Packet for IPv6 {
     fn serialize(
         _packet: &pcap::Packet,
