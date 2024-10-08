@@ -123,9 +123,9 @@ impl IPv4 {
 
     fn options(packet: &Packet) -> Vec<Option> {
         let mut options: Vec<Option> = vec![];
-        let packet_header_len = IPv4::ihl(packet);
+        let packet_header_len = IPv4::ihl(packet) as usize;
 
-        if packet_header_len <= 20 {
+        if packet_header_len <= IP_MIN_HLEN {
             return options;
         }
 
@@ -139,7 +139,7 @@ impl IPv4 {
             let mut data: Vec<u8> = vec![];
 
             let mut i = 2;
-            let res = loop {
+            let end_offset = loop {
                 data.push(packet[offset + i]);
 
                 if i >= option_len - 1 {
@@ -150,7 +150,7 @@ impl IPv4 {
             };
 
             (
-                res + offset,
+                offset + end_offset,
                 Option {
                     r#type,
                     length,
@@ -160,7 +160,7 @@ impl IPv4 {
         }
 
         let mut i = IP_MIN_HLEN + ETH_HLEN;
-        while i < packet_header_len as usize + ETH_HLEN - 1 {
+        while i < ETH_HLEN + packet_header_len - 1 {
             match packet[i] & 0xFF {
                 0 => {
                     options.push(Option {
@@ -179,9 +179,9 @@ impl IPv4 {
                     i += 1;
                 }
                 _ => {
-                    let (res, opt) = create_multi_byte_option(i, packet[i + 1] as usize, packet);
+                    let (offset, opt) = create_multi_byte_option(i, packet[i + 1] as usize, packet);
                     options.push(opt);
-                    i = res;
+                    i = offset;
                     println!("new i {}", i);
                 }
             }
@@ -191,11 +191,10 @@ impl IPv4 {
     }
 
     fn data(packet: &Packet) -> Vec<u8> {
-        let eth_frame_len: usize = 14;
-        let packet_len = IPv4::ihl(packet);
+        let packet_header_len = IPv4::ihl(packet) as usize;
 
         let mut data_vec = vec![];
-        for i in (eth_frame_len + packet_len as usize)..packet.data.len() {
+        for i in (ETH_HLEN + packet_header_len)..packet.data.len() {
             data_vec.push(packet[i]);
         }
 
@@ -276,9 +275,8 @@ mod tests {
 
     #[test]
     fn test_version() {
-        const BYTE: u8 = 0b01000101;
         let mut header = [0u8; 60];
-        header[14] = BYTE;
+        header[14] = 0b01000101;
         let packet = IPv4Packet::new(&header);
         let version = ipv4::IPv4::version(&packet);
         assert_eq!(version, 4);
@@ -286,9 +284,8 @@ mod tests {
 
     #[test]
     fn test_ihl() {
-        const BYTE: u8 = 0b01000101;
         let mut header = [0u8; 60];
-        header[14] = BYTE;
+        header[14] = 0b01000101;
         let packet = IPv4Packet::new(&header);
         let ihl = ipv4::IPv4::ihl(&packet);
         assert_eq!(ihl, 20);
@@ -296,9 +293,8 @@ mod tests {
 
     #[test]
     fn test_dscp() {
-        const BYTE: u8 = 0b00000110;
         let mut header = [0u8; 60];
-        header[15] = BYTE;
+        header[15] = 0b00000110;
         let packet = IPv4Packet::new(&header);
         let dscp = ipv4::IPv4::dscp(&packet);
         assert_eq!(dscp, 1);
@@ -306,9 +302,8 @@ mod tests {
 
     #[test]
     fn test_ecn() {
-        const BYTE: u8 = 0b01000101;
         let mut header = [0u8; 60];
-        header[15] = BYTE;
+        header[15] = 0b01000101;
         let packet = IPv4Packet::new(&header);
         let ecn = ipv4::IPv4::ecn(&packet);
         assert_eq!(ecn, 1);
@@ -316,11 +311,9 @@ mod tests {
 
     #[test]
     fn test_total_length() {
-        const BYTE1: u8 = 0b11111111;
-        const BYTE2: u8 = 0b11111111;
         let mut header = [0u8; 60];
-        header[16] = BYTE1;
-        header[17] = BYTE2;
+        header[16] = 0b11111111;
+        header[17] = 0b11111111;
         let packet = IPv4Packet::new(&header);
         let total_length = ipv4::IPv4::total_length(&packet);
         assert_eq!(total_length, 65535);
@@ -328,11 +321,9 @@ mod tests {
 
     #[test]
     fn test_identification() {
-        const BYTE1: u8 = 0b00000000;
-        const BYTE2: u8 = 0b00000001;
         let mut header = [0u8; 60];
-        header[18] = BYTE1;
-        header[19] = BYTE2;
+        header[18] = 0b00000000;
+        header[19] = 0b00000001;
         let packet = IPv4Packet::new(&header);
         let identification = ipv4::IPv4::identification(&packet);
         assert_eq!(identification, 1);
@@ -340,9 +331,8 @@ mod tests {
 
     #[test]
     fn test_flags() {
-        const BYTE: u8 = 0b00101111;
         let mut header = [0u8; 60];
-        header[20] = BYTE;
+        header[20] = 0b00101111;
         let packet = IPv4Packet::new(&header);
         let flags = ipv4::IPv4::flags(&packet);
         assert_eq!(flags, "001");
@@ -350,11 +340,9 @@ mod tests {
 
     #[test]
     fn test_fragment_offset() {
-        const BYTE1: u8 = 0b00100010;
-        const BYTE2: u8 = 0b00000000;
         let mut header = [0u8; 60];
-        header[20] = BYTE1;
-        header[21] = BYTE2;
+        header[20] = 0b00100010;
+        header[21] = 0b00000000;
         let packet = IPv4Packet::new(&header);
         let fragment_offset = ipv4::IPv4::fragment_offset(&packet);
         assert_eq!(fragment_offset, 512);
@@ -362,9 +350,8 @@ mod tests {
 
     #[test]
     fn test_time_to_live() {
-        const BYTE: u8 = 0b00000001;
         let mut header = [0u8; 60];
-        header[22] = BYTE;
+        header[22] = 0b00000001;
         let packet = IPv4Packet::new(&header);
         let time_to_live = ipv4::IPv4::time_to_live(&packet);
         assert_eq!(time_to_live, 1);
@@ -372,9 +359,8 @@ mod tests {
 
     #[test]
     fn test_protocol() {
-        const BYTE: u8 = 0b00000100;
         let mut header = [0u8; 60];
-        header[23] = BYTE;
+        header[23] = 0b00000100;
         let packet = IPv4Packet::new(&header);
         let protocol = ipv4::IPv4::protocol(&packet);
         assert_eq!(protocol, "0x04");
@@ -382,11 +368,9 @@ mod tests {
 
     #[test]
     fn test_header_checksum() {
-        const BYTE1: u8 = 0b10111000;
-        const BYTE2: u8 = 0b01100001;
         let mut header = [0u8; 60];
-        header[24] = BYTE1;
-        header[25] = BYTE2;
+        header[24] = 0b10111000;
+        header[25] = 0b01100001;
         let packet = IPv4Packet::new(&header);
         let header_checksum = ipv4::IPv4::header_checksum(&packet);
         assert_eq!(header_checksum, "0xb861");
@@ -394,15 +378,11 @@ mod tests {
 
     #[test]
     fn test_src_addr() {
-        const BYTE1: u8 = 0b11000000;
-        const BYTE2: u8 = 0b10101000;
-        const BYTE3: u8 = 0b01010111;
-        const BYTE4: u8 = 0b01111100;
         let mut header = [0u8; 60];
-        header[26] = BYTE1;
-        header[27] = BYTE2;
-        header[28] = BYTE3;
-        header[29] = BYTE4;
+        header[26] = 0b11000000;
+        header[27] = 0b10101000;
+        header[28] = 0b01010111;
+        header[29] = 0b01111100;
         let packet = IPv4Packet::new(&header);
         let src_addr = ipv4::IPv4::src_addr(&packet);
         assert_eq!(src_addr, [192, 168, 87, 124]);
@@ -410,15 +390,11 @@ mod tests {
 
     #[test]
     fn test_dst_addr() {
-        const BYTE1: u8 = 0b11000000;
-        const BYTE2: u8 = 0b10101000;
-        const BYTE3: u8 = 0b01010111;
-        const BYTE4: u8 = 0b01000110;
         let mut header = [0u8; 60];
-        header[30] = BYTE1;
-        header[31] = BYTE2;
-        header[32] = BYTE3;
-        header[33] = BYTE4;
+        header[30] = 0b11000000;
+        header[31] = 0b10101000;
+        header[32] = 0b01010111;
+        header[33] = 0b01000110;
         let packet = IPv4Packet::new(&header);
         let dst_addr = ipv4::IPv4::dst_addr(&packet);
         assert_eq!(dst_addr, [192, 168, 87, 70]);
@@ -487,39 +463,23 @@ mod tests {
 
     #[test]
     fn test_data() {
-        const BYTE1: u8 = 0b01000101;
-        const BYTE2: u8 = 0b01001001;
-        const BYTE3: u8 = 0b00100000;
-        const BYTE4: u8 = 0b01100001;
-        const BYTE5: u8 = 0b01101101;
-        const BYTE6: u8 = 0b00100000;
-        const BYTE7: u8 = 0b01110000;
-        const BYTE8: u8 = 0b01101100;
-        const BYTE9: u8 = 0b01100001;
-        const BYTE10: u8 = 0b01101001;
-        const BYTE11: u8 = 0b01101110;
-        const BYTE12: u8 = 0b01110100;
-        const BYTE13: u8 = 0b01100101;
-        const BYTE14: u8 = 0b01111000;
-        const BYTE15: u8 = 0b01110100;
-        const BYTE16: u8 = 0b00100001;
         let mut header = [0u8; 49];
-        header[14] = BYTE1;
-        header[34] = BYTE2;
-        header[35] = BYTE3;
-        header[36] = BYTE4;
-        header[37] = BYTE5;
-        header[38] = BYTE6;
-        header[39] = BYTE7;
-        header[40] = BYTE8;
-        header[41] = BYTE9;
-        header[42] = BYTE10;
-        header[43] = BYTE11;
-        header[44] = BYTE12;
-        header[45] = BYTE13;
-        header[46] = BYTE14;
-        header[47] = BYTE15;
-        header[48] = BYTE16;
+        header[14] = 0b01000101;
+        header[34] = 0b01001001;
+        header[35] = 0b00100000;
+        header[36] = 0b01100001;
+        header[37] = 0b01101101;
+        header[38] = 0b00100000;
+        header[39] = 0b01110000;
+        header[40] = 0b01101100;
+        header[41] = 0b01100001;
+        header[42] = 0b01101001;
+        header[43] = 0b01101110;
+        header[44] = 0b01110100;
+        header[45] = 0b01100101;
+        header[46] = 0b01111000;
+        header[47] = 0b01110100;
+        header[48] = 0b00100001;
         let packet = IPv4Packet::new(&header);
         let data = ipv4::IPv4::data(&packet);
         let mut buffer: String = "".to_string();
