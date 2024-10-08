@@ -275,137 +275,137 @@ mod tests {
 
     #[test]
     fn test_version() {
-        let mut header = [0u8; 60];
-        header[14] = 0b01000101;
-        let packet = IPv4Packet::new(&header);
-        let version = ipv4::IPv4::version(&packet);
+        let mut packet = [0u8; 60];
+        packet[14] = 0b01000101;
+        let ipv4_packet = IPv4Packet::new(&packet);
+        let version = ipv4::IPv4::version(&ipv4_packet);
         assert_eq!(version, 4);
     }
 
     #[test]
     fn test_ihl() {
-        let mut header = [0u8; 60];
-        header[14] = 0b01000101;
-        let packet = IPv4Packet::new(&header);
-        let ihl = ipv4::IPv4::ihl(&packet);
+        let mut packet = [0u8; 60];
+        packet[14] = 0b01000101;
+        let ipv4_packet = IPv4Packet::new(&packet);
+        let ihl = ipv4::IPv4::ihl(&ipv4_packet);
         assert_eq!(ihl, 20);
     }
 
     #[test]
     fn test_dscp() {
-        let mut header = [0u8; 60];
-        header[15] = 0b00000110;
-        let packet = IPv4Packet::new(&header);
-        let dscp = ipv4::IPv4::dscp(&packet);
+        let mut packet = [0u8; 60];
+        packet[15] = 0b00000110;
+        let ipv4_packet = IPv4Packet::new(&packet);
+        let dscp = ipv4::IPv4::dscp(&ipv4_packet);
         assert_eq!(dscp, 1);
     }
 
     #[test]
     fn test_ecn() {
-        let mut header = [0u8; 60];
-        header[15] = 0b01000101;
-        let packet = IPv4Packet::new(&header);
-        let ecn = ipv4::IPv4::ecn(&packet);
+        let mut packet = [0u8; 60];
+        packet[15] = 0b01000101;
+        let ipv4_packet = IPv4Packet::new(&packet);
+        let ecn = ipv4::IPv4::ecn(&ipv4_packet);
         assert_eq!(ecn, 1);
     }
 
     #[test]
     fn test_total_length() {
-        let mut header = [0u8; 60];
-        header[16] = 0b11111111;
-        header[17] = 0b11111111;
-        let packet = IPv4Packet::new(&header);
-        let total_length = ipv4::IPv4::total_length(&packet);
+        let mut packet = [0u8; 60];
+        packet[16] = 0b11111111;
+        packet[17] = 0b11111111;
+        let ipv4_packet = IPv4Packet::new(&packet);
+        let total_length = ipv4::IPv4::total_length(&ipv4_packet);
         assert_eq!(total_length, 65535);
     }
 
     #[test]
     fn test_identification() {
-        let mut header = [0u8; 60];
-        header[18] = 0b00000000;
-        header[19] = 0b00000001;
-        let packet = IPv4Packet::new(&header);
-        let identification = ipv4::IPv4::identification(&packet);
+        let mut packet = [0u8; 60];
+        packet[18] = 0b00000000;
+        packet[19] = 0b00000001;
+        let ipv4_packet = IPv4Packet::new(&packet);
+        let identification = ipv4::IPv4::identification(&ipv4_packet);
         assert_eq!(identification, 1);
     }
 
     #[test]
     fn test_flags() {
-        let mut header = [0u8; 60];
-        header[20] = 0b00101111;
-        let packet = IPv4Packet::new(&header);
-        let flags = ipv4::IPv4::flags(&packet);
+        let mut packet = [0u8; 60];
+        packet[20] = 0b00101111;
+        let ipv4_packet = IPv4Packet::new(&packet);
+        let flags = ipv4::IPv4::flags(&ipv4_packet);
         assert_eq!(flags, "001");
     }
 
     #[test]
     fn test_fragment_offset() {
-        let mut header = [0u8; 60];
-        header[20] = 0b00100010;
-        header[21] = 0b00000000;
-        let packet = IPv4Packet::new(&header);
-        let fragment_offset = ipv4::IPv4::fragment_offset(&packet);
+        let mut packet = [0u8; 60];
+        packet[20] = 0b00100010;
+        packet[21] = 0b00000000;
+        let ipv4_packet = IPv4Packet::new(&packet);
+        let fragment_offset = ipv4::IPv4::fragment_offset(&ipv4_packet);
         assert_eq!(fragment_offset, 512);
     }
 
     #[test]
     fn test_time_to_live() {
-        let mut header = [0u8; 60];
-        header[22] = 0b00000001;
-        let packet = IPv4Packet::new(&header);
-        let time_to_live = ipv4::IPv4::time_to_live(&packet);
+        let mut packet = [0u8; 60];
+        packet[22] = 0b00000001;
+        let ipv4_packet = IPv4Packet::new(&packet);
+        let time_to_live = ipv4::IPv4::time_to_live(&ipv4_packet);
         assert_eq!(time_to_live, 1);
     }
 
     #[test]
     fn test_protocol() {
-        let mut header = [0u8; 60];
-        header[23] = 0b00000100;
-        let packet = IPv4Packet::new(&header);
-        let protocol = ipv4::IPv4::protocol(&packet);
+        let mut packet = [0u8; 60];
+        packet[23] = 0b00000100;
+        let ipv4_packet = IPv4Packet::new(&packet);
+        let protocol = ipv4::IPv4::protocol(&ipv4_packet);
         assert_eq!(protocol, "0x04");
     }
 
     #[test]
     fn test_header_checksum() {
-        let mut header = [0u8; 60];
-        header[24] = 0b10111000;
-        header[25] = 0b01100001;
-        let packet = IPv4Packet::new(&header);
-        let header_checksum = ipv4::IPv4::header_checksum(&packet);
-        assert_eq!(header_checksum, "0xb861");
+        let mut packet = [0u8; 60];
+        packet[24] = 0b10111000;
+        packet[25] = 0b01100001;
+        let ipv4_packet = IPv4Packet::new(&packet);
+        let packet_checksum = ipv4::IPv4::header_checksum(&ipv4_packet);
+        assert_eq!(packet_checksum, "0xb861");
     }
 
     #[test]
     fn test_src_addr() {
-        let mut header = [0u8; 60];
-        header[26] = 0b11000000;
-        header[27] = 0b10101000;
-        header[28] = 0b01010111;
-        header[29] = 0b01111100;
-        let packet = IPv4Packet::new(&header);
-        let src_addr = ipv4::IPv4::src_addr(&packet);
+        let mut packet = [0u8; 60];
+        packet[26] = 0b11000000;
+        packet[27] = 0b10101000;
+        packet[28] = 0b01010111;
+        packet[29] = 0b01111100;
+        let ipv4_packet = IPv4Packet::new(&packet);
+        let src_addr = ipv4::IPv4::src_addr(&ipv4_packet);
         assert_eq!(src_addr, [192, 168, 87, 124]);
     }
 
     #[test]
     fn test_dst_addr() {
-        let mut header = [0u8; 60];
-        header[30] = 0b11000000;
-        header[31] = 0b10101000;
-        header[32] = 0b01010111;
-        header[33] = 0b01000110;
-        let packet = IPv4Packet::new(&header);
-        let dst_addr = ipv4::IPv4::dst_addr(&packet);
+        let mut packet = [0u8; 60];
+        packet[30] = 0b11000000;
+        packet[31] = 0b10101000;
+        packet[32] = 0b01010111;
+        packet[33] = 0b01000110;
+        let ipv4_packet = IPv4Packet::new(&packet);
+        let dst_addr = ipv4::IPv4::dst_addr(&ipv4_packet);
         assert_eq!(dst_addr, [192, 168, 87, 70]);
     }
 
     #[test]
     fn test_no_options() {
-        let mut header = [0u8; 60];
-        header[14] = 0x5;
-        let packet = IPv4Packet::new(&header);
-        let options = ipv4::IPv4::options(&packet);
+        let mut packet = [0u8; 60];
+        packet[14] = 0x5;
+        let ipv4_packet = IPv4Packet::new(&packet);
+        let options = ipv4::IPv4::options(&ipv4_packet);
         assert_eq!(options.len(), 0);
     }
 
@@ -418,35 +418,35 @@ mod tests {
         // Record Route length (15 bytes)
         const RR_LEN: u8 = 15;
 
-        let mut header = [0u8; 50];
+        let mut packet = [0u8; 50];
         // Set IHL = 9 (20 bytes + 15 bytes)
-        header[14] = 0x9;
+        packet[14] = 0x9;
 
-        header[34] = NOP; // Option: No Operation (1 byte)
-        header[35] = RR_TYPE; // Option: Record Route (type 7) (1 byte)
-        header[36] = RR_LEN; // Length of the Record Route option (15 bytes)
-        header[37] = 4; // Pointer to first available entry
-
-        // IP addr
-        header[38] = 192;
-        header[39] = 168;
-        header[40] = 1;
-        header[41] = 1;
+        packet[34] = NOP; // Option: No Operation (1 byte)
+        packet[35] = RR_TYPE; // Option: Record Route (type 7) (1 byte)
+        packet[36] = RR_LEN; // Length of the Record Route option (15 bytes)
+        packet[37] = 4; // Pointer to first available entry
 
         // IP addr
-        header[42] = 192;
-        header[43] = 168;
-        header[44] = 1;
-        header[45] = 2;
+        packet[38] = 192;
+        packet[39] = 168;
+        packet[40] = 1;
+        packet[41] = 1;
 
         // IP addr
-        header[46] = 192;
-        header[47] = 168;
-        header[48] = 1;
-        header[49] = 3;
+        packet[42] = 192;
+        packet[43] = 168;
+        packet[44] = 1;
+        packet[45] = 2;
 
-        let packet = IPv4Packet::new(&header);
-        let options = ipv4::IPv4::options(&packet);
+        // IP addr
+        packet[46] = 192;
+        packet[47] = 168;
+        packet[48] = 1;
+        packet[49] = 3;
+
+        let ipv4_packet = IPv4Packet::new(&packet);
+        let options = ipv4::IPv4::options(&ipv4_packet);
 
         assert_eq!(options.len(), 2);
         assert_eq!(options[0].length, 0);
@@ -463,25 +463,25 @@ mod tests {
 
     #[test]
     fn test_data() {
-        let mut header = [0u8; 49];
-        header[14] = 0b01000101;
-        header[34] = 0b01001001;
-        header[35] = 0b00100000;
-        header[36] = 0b01100001;
-        header[37] = 0b01101101;
-        header[38] = 0b00100000;
-        header[39] = 0b01110000;
-        header[40] = 0b01101100;
-        header[41] = 0b01100001;
-        header[42] = 0b01101001;
-        header[43] = 0b01101110;
-        header[44] = 0b01110100;
-        header[45] = 0b01100101;
-        header[46] = 0b01111000;
-        header[47] = 0b01110100;
-        header[48] = 0b00100001;
-        let packet = IPv4Packet::new(&header);
-        let data = ipv4::IPv4::data(&packet);
+        let mut packet = [0u8; 49];
+        packet[14] = 0b01000101;
+        packet[34] = 0b01001001;
+        packet[35] = 0b00100000;
+        packet[36] = 0b01100001;
+        packet[37] = 0b01101101;
+        packet[38] = 0b00100000;
+        packet[39] = 0b01110000;
+        packet[40] = 0b01101100;
+        packet[41] = 0b01100001;
+        packet[42] = 0b01101001;
+        packet[43] = 0b01101110;
+        packet[44] = 0b01110100;
+        packet[45] = 0b01100101;
+        packet[46] = 0b01111000;
+        packet[47] = 0b01110100;
+        packet[48] = 0b00100001;
+        let ipv4_packet = IPv4Packet::new(&packet);
+        let data = ipv4::IPv4::data(&ipv4_packet);
         let mut buffer: String = "".to_string();
         for i in data.iter() {
             let x = *i as char;
