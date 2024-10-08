@@ -1,7 +1,9 @@
-#[derive(Clone, Copy)]
+use std::fmt;
+
 pub enum EtherType {
     IPv4,
     IPv6,
+    Unknown(u16),
 }
 
 impl Default for EtherType {
@@ -10,24 +12,23 @@ impl Default for EtherType {
     }
 }
 
+impl fmt::Display for EtherType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            EtherType::IPv4 => write!(f, "IPv4 (0x0800)"),
+            EtherType::IPv6 => write!(f, "IPv6 (0x86DD)"),
+            EtherType::Unknown(value) => write!(f, "EtherType (0x{:04x})", value),
+        }
+    }
+}
+
 impl EtherType {
-    fn set_type(hex: &str) -> EtherType {
+    fn set_type(hex: u16) -> Option<EtherType> {
         match hex {
-            "0x0800" => EtherType::IPv4,
-            "0x86DD" => EtherType::IPv6,
-            _ => todo!("EtherType not found: {:?}", hex),
+            0x0800 => Some(EtherType::IPv4),
+            0x86DD => Some(EtherType::IPv6),
+            _ => Some(EtherType::Unknown(hex)),
         }
-    }
-
-    fn value(&self) -> String {
-        match *self {
-            EtherType::IPv4 => "0x0800".to_string(),
-            EtherType::IPv6 => "0x86DD".to_string(),
-        }
-    }
-
-    pub fn to_string(&self) -> String {
-        format!("{}", self.value())
     }
 }
 
@@ -53,11 +54,9 @@ impl EthernetFrame {
         EthernetFrame::to_string_mac(self.src_mac)
     }
 
-    pub fn to_string_ip_type(&self) -> String {
-        format!("{}", self.ip_type.to_string())
-    }
-
     pub fn serialize(packet: &pcap::Packet) -> EthernetFrame {
+        let ip_type = EtherType::set_type(u16::from_be_bytes([packet[12], packet[13]]));
+
         EthernetFrame {
             dest_mac: [
                 packet[0], packet[1], packet[2], packet[3], packet[4], packet[5],
@@ -65,10 +64,9 @@ impl EthernetFrame {
             src_mac: [
                 packet[6], packet[7], packet[8], packet[9], packet[10], packet[11],
             ],
-            ip_type: EtherType::set_type(&format!(
-                "0x{:04x}",
-                u16::from_be_bytes([packet[12], packet[13]])
-            )),
+            ip_type: ip_type.unwrap_or_else(|| {
+                EtherType::Unknown(u16::from_be_bytes([packet[12], packet[13]]))
+            }),
         }
     }
 }
