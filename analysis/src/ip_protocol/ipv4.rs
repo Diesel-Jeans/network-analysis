@@ -4,7 +4,10 @@ use pcap::Packet;
 use std::usize;
 
 use super::ip_protocol;
-use crate::ethernet_frame;
+use crate::{
+    ethernet_frame,
+    ip_protocol::{ETH_HLEN, IP_MIN_HLEN},
+};
 use ethernet_frame::EthernetFrame;
 
 pub struct IPv4 {
@@ -41,13 +44,13 @@ pub struct IPv4 {
     pub src_addr: [u8; 4],
     /// (32-bit) Destination address - May be affected by NAT
     pub dest_addr: [u8; 4],
-    /// (40-bit) Options that are not often used - Active if IHL > 5 (6-15)
+    /// (40-bit) Options that are not often used - Active if IHL > 20 bytes (max 60 bytes)
     /// Options Types:
     /// Single-byte: No operation (Type 1), End of option (Type 0)
     /// Multiple-byte: Record route (Type 7), Strict source route (Type 137),
     /// Loose source route (type 131), Timestamp (Type 68)
     pub options: Vec<Option>,
-    /// (20-bytes - 65,535-bytes) The packet payload - Not included in the checksum
+    /// (20-bytes to 65,535-bytes) The packet payload - Not included in the checksum
     pub data: Vec<u8>,
 }
 
@@ -60,7 +63,7 @@ pub struct Option {
     /// (5-bit) Specifies an option
     pub r#type: u8,
     /// (8-bit) The size of the option including type, size, data
-    pub size: u8,
+    pub length: u8,
     /// (36-bytes) Data
     pub data: Vec<u8>,
 }
@@ -119,41 +122,72 @@ impl IPv4 {
     }
 
     fn options(packet: &Packet) -> Vec<Option> {
-        let ihl = packet[14] >> 4;
-        let ihl_bytes = ihl * 4;
-        if ihl > 5 {
-            let mut options: Vec<Option> = vec![];
-            let mut init_packet = 34;
-            let option_length = packet[init_packet] << 3 >> 3;
-            while option_length <= ihl_bytes && option_length <= 38 {
-                let r#type = packet[init_packet];
-                let size = packet[init_packet + 1];
-                // let mut size = packet[25] << 3 >> 3;
-                // let copied = packet[25] >> 7;
-                // let option_class = packet[25] << 1 >> 5;
-                // option_length = packet[25] << 3 >> 3;
-                let mut data = Vec::new();
+        let mut options: Vec<Option> = vec![];
+        let packet_header_len = IPv4::ihl(packet);
 
-                for i in (init_packet + 2)..option_length as usize {
-                    if ihl_bytes as usize <= i {
-                        init_packet = i;
-                        break;
-                    }
+        if packet_header_len <= 20 {
+            return options;
+        }
 
-                    data.push(packet[i]);
+        fn create_multi_byte_option(
+            offset: usize,
+            option_len: usize,
+            packet: &Packet,
+        ) -> (usize, Option) {
+            let r#type = packet[offset];
+            let length = packet[offset + 1];
+            let mut data: Vec<u8> = vec![];
+
+            let mut i = 2;
+            let res = loop {
+                data.push(packet[offset + i]);
+
+                if i >= option_len - 1 {
+                    break i;
                 }
 
-                options.push(Option { r#type, size, data });
-            }
+                i += 1;
+            };
 
-            options
-        } else {
-            vec![Option {
-                r#type: 0,
-                size: 0,
-                data: vec![0],
-            }]
+            (
+                res + offset,
+                Option {
+                    r#type,
+                    length,
+                    data,
+                },
+            )
         }
+
+        let mut i = IP_MIN_HLEN + ETH_HLEN;
+        while i < packet_header_len as usize + ETH_HLEN - 1 {
+            match packet[i] & 0xFF {
+                0 => {
+                    options.push(Option {
+                        r#type: 0,
+                        length: 0,
+                        data: vec![],
+                    });
+                    i += 1;
+                }
+                1 => {
+                    options.push(Option {
+                        r#type: 1,
+                        length: 0,
+                        data: vec![],
+                    });
+                    i += 1;
+                }
+                _ => {
+                    let (res, opt) = create_multi_byte_option(i, packet[i + 1] as usize, packet);
+                    options.push(opt);
+                    i = res;
+                    println!("new i {}", i);
+                }
+            }
+        }
+
+        options
     }
 
     fn data(packet: &Packet) -> Vec<u8> {
@@ -391,6 +425,67 @@ mod tests {
     }
 
     #[test]
+    fn test_no_options() {
+        let mut header = [0u8; 60];
+        header[14] = 0x5;
+        let packet = IPv4Packet::new(&header);
+        let options = ipv4::IPv4::options(&packet);
+        assert_eq!(options.len(), 0);
+    }
+
+    #[test]
+    fn test_multiple_options() {
+        // No Operation (1 byte)
+        const NOP: u8 = 1;
+        // Record Route (Type 7)
+        const RR_TYPE: u8 = 7;
+        // Record Route length (15 bytes)
+        const RR_LEN: u8 = 15;
+
+        let mut header = [0u8; 50];
+        // Set IHL = 9 (20 bytes + 15 bytes)
+        header[14] = 0x9;
+
+        header[34] = NOP; // Option: No Operation (1 byte)
+        header[35] = RR_TYPE; // Option: Record Route (type 7) (1 byte)
+        header[36] = RR_LEN; // Length of the Record Route option (15 bytes)
+        header[37] = 4; // Pointer to first available entry
+
+        // IP addr
+        header[38] = 192;
+        header[39] = 168;
+        header[40] = 1;
+        header[41] = 1;
+
+        // IP addr
+        header[42] = 192;
+        header[43] = 168;
+        header[44] = 1;
+        header[45] = 2;
+
+        // IP addr
+        header[46] = 192;
+        header[47] = 168;
+        header[48] = 1;
+        header[49] = 3;
+
+        let packet = IPv4Packet::new(&header);
+        let options = ipv4::IPv4::options(&packet);
+
+        assert_eq!(options.len(), 2);
+        assert_eq!(options[0].length, 0);
+        assert_eq!(options[0].r#type, NOP);
+        assert_eq!(options[0].data, vec![]);
+
+        assert_eq!(options[1].r#type, RR_TYPE);
+        assert_eq!(options[1].length, RR_LEN);
+        assert_eq!(
+            options[1].data,
+            vec![4, 192, 168, 1, 1, 192, 168, 1, 2, 192, 168, 1, 3]
+        );
+    }
+
+    #[test]
     fn test_data() {
         const BYTE1: u8 = 0b01000101;
         const BYTE2: u8 = 0b01001001;
@@ -430,7 +525,6 @@ mod tests {
         let mut buffer: String = "".to_string();
         for i in data.iter() {
             let x = *i as char;
-            println!("i {}: {}", i, *i as char);
             buffer.push(x);
         }
         assert_eq!(buffer, "I am plaintext!");
