@@ -9,6 +9,5 @@ pub trait Packet {
 
     #[allow(dead_code)]
     fn get_eth_frame(&self) -> &EthernetFrame;
-    
     fn as_any(&self) -> &dyn Any;
 }

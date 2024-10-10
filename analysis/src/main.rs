@@ -10,7 +10,7 @@ fn main() {
         .expect("no device available");
     println!("Using device {}", device.name);
 
-    let mut cap = pcap::Capture::from_device("wlp0s20f3")
+    let mut cap = pcap::Capture::from_device(device)
         .unwrap()
         .immediate_mode(true)
         .open()
