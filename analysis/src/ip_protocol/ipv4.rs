@@ -1,5 +1,6 @@
 #![crate_name = "doc"]
 
+use libc::timeval;
 use pcap::Packet;
 use std::usize;
 
@@ -11,6 +12,8 @@ use crate::{
 use ethernet_frame::EthernetFrame;
 
 pub struct IPv4 {
+    /// Time when packet was captured
+    pub time_stamp: timeval,
     /// (14-bytes) Ethernet Frame
     pub eth_frame: EthernetFrame,
     /// (4-bit) Version of IP packet - IPv4 equal to 4
@@ -69,6 +72,10 @@ pub struct Option {
 }
 
 impl IPv4 {
+    fn time_stamp(packet: &Packet) -> timeval {
+        packet.header.ts
+    }
+
     fn version(packet: &Packet) -> u8 {
         packet[14] >> 4
     }
@@ -222,6 +229,7 @@ impl ip_protocol::Packet for IPv4 {
         eth_frame: ethernet_frame::EthernetFrame,
     ) -> Box<dyn ip_protocol::Packet> {
         Box::new(IPv4 {
+            time_stamp: IPv4::time_stamp(packet),
             eth_frame,
             version: IPv4::version(packet),
             ihl: IPv4::ihl(packet),
@@ -243,6 +251,10 @@ impl ip_protocol::Packet for IPv4 {
 
     fn get_eth_frame(&self) -> &EthernetFrame {
         &self.eth_frame
+    }
+
+    fn get_time_stamp(&self) -> timeval {
+        self.time_stamp
     }
 
     fn as_any(&self) -> &dyn std::any::Any {

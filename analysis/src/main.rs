@@ -28,16 +28,22 @@ fn main() {
                 }
             };
 
-            if let Some(ip_packet) = ip_packet {
-                let packet_ref: &dyn Packet = &*ip_packet;
+            // TODO: Insert into database
+            if let Some(packet) = &ip_packet {
+                println!("dst mac {}", packet.get_eth_frame().to_string_dest_mac());
+                println!("src mac {}", packet.get_eth_frame().to_string_src_mac());
+                println!("type {}", packet.get_eth_frame().ip_type.to_string());
+                println!("ts {:?}", packet.get_time_stamp());
+            }
+
+            // Downcast to access members (not nessary in 'production')
+            if let Some(packet) = ip_packet {
+                let packet_ref: &dyn Packet = &*packet;
                 let ipv4_packet: &IPv4 = packet_ref
                     .as_any()
                     .downcast_ref::<IPv4>()
                     .expect("Not IPv4");
 
-                println!("dst mac {}", ipv4_packet.eth_frame.to_string_dest_mac());
-                println!("src mac {}", ipv4_packet.eth_frame.to_string_src_mac());
-                println!("type {}", ipv4_packet.eth_frame.ip_type.to_string());
                 println!("version {}", ipv4_packet.version);
                 println!("ihc {}", ipv4_packet.ihl);
                 println!("dscp {}", ipv4_packet.dscp);
@@ -52,7 +58,7 @@ fn main() {
                 println!("src addr {}", ipv4_packet.to_string_src_addr());
                 println!("dst addr {}", ipv4_packet.to_string_dst_addr());
                 println!("options len {}", ipv4_packet.options.len());
-                println!("data len {}", ipv4_packet.data.len());
+                println!("data len {}\n", ipv4_packet.data.len());
             } else {
                 eprintln!("No valid IP packet found!");
             }
