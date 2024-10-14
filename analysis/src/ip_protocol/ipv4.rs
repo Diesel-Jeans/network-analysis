@@ -166,9 +166,12 @@ impl IPv4 {
             )
         }
 
+        // When IP header length is > 20 bytes there are option(s)
+        // The ethernet frame length is 14
+        // Create option(s) from byte 34 = 20 + 14
         let mut i = IP_MIN_HLEN + ETH_HLEN;
         while i < ETH_HLEN + packet_header_len - 1 {
-            match packet[i] & 0xFF {
+            match packet[i] {
                 0 => {
                     options.push(Option {
                         r#type: 0,
