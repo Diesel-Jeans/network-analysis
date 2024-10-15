@@ -1,17 +1,10 @@
-use ctrlc;
-use rusqlite::Connection;
-use std::sync::atomic::AtomicBool;
+use ethernet_frame::{EtherType, EthernetFrame};
+use ip_protocol::{IPv4, Packet};
 
-mod database;
 mod ethernet_frame;
 mod ip_protocol;
 
-static KILL_EXECUTION: AtomicBool = AtomicBool::new(false);
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let conn = Connection::open("./analysis/analysisDB.db3")?;
-    database::setup_database(&conn)?;
-
+fn main() {
     let device = pcap::Device::lookup()
         .expect("device lookup failed")
         .expect("no device available");
@@ -23,57 +16,48 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .open()
         .unwrap();
 
-    let mut ethernet_frame: ethernet_frame::EthernetFrame = Default::default();
-    let mut ipv4: ip_protocol::IPv4 = Default::default();
-    let _ipv6: ip_protocol::IPv6 = Default::default();
-    let mut counter: u16 = 1;
-    ctrlc::set_handler(|| {
-        KILL_EXECUTION.store(true, std::sync::atomic::Ordering::Relaxed);
-    })?;
-
     while let Ok(packet) = cap.next_packet() {
-        println!("received packet number: {:?}", counter);
-        ethernet_frame.dest_mac = [
-            packet[0], packet[1], packet[2], packet[3], packet[4], packet[5],
-        ];
-        ethernet_frame.src_mac = [
-            packet[6], packet[7], packet[8], packet[9], packet[10], packet[11],
-        ];
-        ethernet_frame.ip_type = u16::from_be_bytes([packet[12], packet[13]]);
-        ipv4.src_addr = [packet[30], packet[31], packet[32], packet[33]];
-        ipv4.dest_addr = [packet[34], packet[35], packet[36], packet[37]];
+        let eth_frame = EthernetFrame::serialize(&packet);
 
-        conn.execute(
-            "INSERT INTO Packet (DestMac, SrcMac, IpType, SrcAddress, DestAddress) VALUES (?1, ?2, ?3, ?4, ?5)",
-            (
-                ethernet_frame.to_string_dest_mac(),
-                ethernet_frame.to_string_src_mac(),
-                ethernet_frame.to_string_ip_type(),
-                ip_protocol::ToString::src_addr(&ipv4),
-                ip_protocol::ToString::dest_addr(&ipv4)
-            ),
-        )?;
+        let ip_packet: Option<Box<dyn Packet>> = match eth_frame.ip_type {
+            EtherType::IPv4 => Some(ip_protocol::IPv4::serialize(&packet, eth_frame)),
+            _ => {
+                eprintln!("Unknown {:?}", eth_frame.ip_type.to_string());
+                continue;
+            }
+        };
 
-        if KILL_EXECUTION.load(std::sync::atomic::Ordering::Relaxed) {
-            break;
+        // TODO: Insert into database
+        if let Some(packet) = ip_packet {
+            println!("dst mac {}", packet.get_eth_frame().to_string_dest_mac());
+            println!("src mac {}", packet.get_eth_frame().to_string_src_mac());
+            println!("type {}", packet.get_eth_frame().ip_type.to_string());
+            println!("ts {:?}", packet.get_time_stamp());
+
+            // Downcast to access members (not nessary in 'production')
+            let packet_ref: &dyn Packet = &*packet;
+            let ipv4_packet: &IPv4 = packet_ref
+                .as_any()
+                .downcast_ref::<IPv4>()
+                .expect("Not IPv4");
+
+            println!("version {}", ipv4_packet.version);
+            println!("ihc {}", ipv4_packet.ihl);
+            println!("dscp {}", ipv4_packet.dscp);
+            println!("ecn {}", ipv4_packet.ecn);
+            println!("total length {}", ipv4_packet.total_length);
+            println!("identification {}", ipv4_packet.identification);
+            println!("flags {}", ipv4_packet.flags);
+            println!("fragment offset {}", ipv4_packet.fragment_offset);
+            println!("time to live {}", ipv4_packet.time_to_live);
+            println!("protocol {}", ipv4_packet.protocol);
+            println!("header checksum {}", ipv4_packet.header_checksum);
+            println!("src addr {}", ipv4_packet.to_string_src_addr());
+            println!("dst addr {}", ipv4_packet.to_string_dst_addr());
+            println!("options len {}", ipv4_packet.options.len());
+            println!("data len {}\n", ipv4_packet.data.len());
+        } else {
+            eprintln!("No valid IP packet found!");
         }
-        counter += 1;
     }
-
-    let mut stmt = conn.prepare("SELECT * FROM Packet")?;
-    let mut rows = stmt.query([])?;
-    println!("");
-    while let Some(row) = rows.next()? {
-        println!(
-            "packet number id: {}",
-            row.get::<usize, i64>(0)?.to_string()
-        );
-        println!("dest MAC: {}", row.get::<usize, String>(1)?);
-        println!("src MAC: {}", row.get::<usize, String>(2)?);
-        println!("ip type: {}", row.get::<usize, String>(3)?);
-        println!("src addr: {}", row.get::<usize, String>(4)?);
-        println!("dest addr: {}", row.get::<usize, String>(5)?);
-        println!("");
-    }
-    Ok(())
 }
