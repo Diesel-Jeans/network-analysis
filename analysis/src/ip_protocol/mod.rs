@@ -3,6 +3,7 @@ pub const IP_MIN_HLEN: usize = 20;
 
 mod ip_protocol;
 pub use ip_protocol::Packet;
+pub use ip_protocol::packet_filter;
 
 mod ipv4;
 pub use ipv4::IPv4;
