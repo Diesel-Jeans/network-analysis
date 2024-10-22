@@ -13,15 +13,15 @@ pub trait Packet {
     fn as_any(&self) -> &dyn Any;
 }
 
-pub fn packet_filter<U>(
+pub fn packet_filter<T>(
     packet: Option<Box<dyn Packet>>,
-    predicate: impl Fn(&U) -> bool,
+    predicate: impl Fn(&T) -> bool,
 ) -> Option<Box<dyn Packet>>
 where
-    U: 'static + Packet,
+    T: 'static + Packet,
 {
     packet.and_then(|p| {
-        if let Some(target_packet) = p.as_any().downcast_ref::<U>() {
+        if let Some(target_packet) = p.as_any().downcast_ref::<T>() {
             if predicate(target_packet) {
                 Some(p)
             } else {
